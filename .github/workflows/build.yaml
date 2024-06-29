@@ -38,7 +38,7 @@ jobs:
           ./make.bash
 
       - name: Upload artifact
-        if: ${{ matrix.os != "linux" && matrix.arch != "amd64" }}
+        if: ${{ (matrix.os != "linux") && (matrix.arch != "amd64") }}
         uses: actions/upload-artifact@v4
         with:
           name: go-build-${{ matrix.os }}-${{ matrix.arch }}
