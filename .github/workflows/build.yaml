@@ -38,19 +38,21 @@ jobs:
           cd src
           ./make.bash
 
-      - name: Upload artifact
+      - name: Compress binaries (non-linux/amd64)
         if: matrix.os != 'linux' || matrix.arch != 'amd64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-${{ matrix.os }}-${{ matrix.arch }}
-          path: ./bin/${{ matrix.os }}_${{ matrix.arch }}/
+        run: |
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C src/bin/${{ matrix.os }}_${{ matrix.arch }} .
+
+      - name: Compress binaries (linux/amd64)
+        if: matrix.os == 'linux' && matrix.arch == 'amd64'
+        run: |
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C src/bin .
 
       - name: Upload artifact
-        if: matrix.os == 'linux' && matrix.arch == 'amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: go-${{ matrix.os }}-${{ matrix.arch }}
-          path: ./bin/
+          name: go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          path: go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
 
   release:
     runs-on: ubuntu-latest
@@ -118,7 +120,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./artifacts/**/*
+            ./artifacts/*
             sha.txt
           tag_name: ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
           name: Release ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
