@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [amd64, arm64]
+        os: [darwin, linux, windows]
+        arch: [amd64, arm64, 386, arm]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,9 +30,10 @@ jobs:
         with:
           go-version: "stable"
       - name: Build
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
         run: |
-          GOOS=$(echo ${{ matrix.os }} | sed 's/-latest//')
-          GOARCH=${{ matrix.arch }}
           cd src
           ./make.bash
 
