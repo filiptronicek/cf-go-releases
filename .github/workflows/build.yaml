@@ -41,12 +41,12 @@ jobs:
       - name: Compress binaries (non-linux/amd64)
         if: matrix.os != 'linux' || matrix.arch != 'amd64'
         run: |
-          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C src/bin/${{ matrix.os }}_${{ matrix.arch }} .
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C ./bin/${{ matrix.os }}_${{ matrix.arch }} .
 
       - name: Compress binaries (linux/amd64)
         if: matrix.os == 'linux' && matrix.arch == 'amd64'
         run: |
-          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C src/bin .
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C ./bin .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
