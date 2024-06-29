@@ -1,0 +1,130 @@
+name: Build and Upload Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * 1-5"
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [darwin, linux, windows]
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: cloudflare/go
+          ref: cf
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          cd src
+          ./make.bash
+
+      - name: Compress binaries (non-linux/amd64)
+        if: matrix.os != 'linux' || matrix.arch != 'amd64'
+        run: |
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C ./bin/${{ matrix.os }}_${{ matrix.arch }} .
+
+      - name: Compress binaries (linux/amd64)
+        if: matrix.os == 'linux' && matrix.arch == 'amd64'
+        run: |
+          tar -czf go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz -C ./bin .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          path: go-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: cloudflare/go
+          ref: cf
+
+      - name: Download last release SHA
+        uses: robinraju/release-downloader@v1.11
+        with:
+          latest: true
+          fileName: "sha.txt"
+        continue-on-error: true
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if [ -f sha.txt ]; then
+            stored_sha=$(cat sha.txt)
+          else
+            stored_sha=""
+          fi
+          latest_sha=$(git rev-parse HEAD)
+          echo "latest_sha=$latest_sha" >> "$GITHUB_ENV"
+          echo "stored_sha=$stored_sha" >> "$GITHUB_ENV"
+          if [ "$latest_sha" != "$stored_sha" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Store SHA
+        if: steps.changes.outputs.release == 'true'
+        run: echo ${{ env.latest_sha }} > sha.txt
+
+      - name: Download build artifacts
+        if: steps.changes.outputs.release == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Retrieve version
+        id: version
+        run: |
+          version=$(head -n 1 VERSION | cut -d'-' -f1)
+          echo "go_version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_date=$(date +'%d.%m.%Y')" >> "$GITHUB_OUTPUT"
+
+      - name: List artifacts
+        if: steps.changes.outputs.release == 'true'
+        run: |
+          echo "Artifacts to be uploaded:"
+          ls ./artifacts
+
+      - name: Create release
+        if: steps.changes.outputs.release == 'true'
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/**/*.tar.gz
+            sha.txt
+          tag_name: ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
+          name: Release ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
+          body: |
+            New release based on latest changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
