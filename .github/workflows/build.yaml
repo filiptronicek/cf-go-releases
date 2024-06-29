@@ -29,6 +29,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "stable"
+
       - name: Build
         env:
           GOOS: ${{ matrix.os }}
@@ -38,16 +39,60 @@ jobs:
           ./make.bash
 
       - name: Upload artifact
-        if: ${{ matrix.os != 'linux' || matrix.arch != 'amd64' }}
         uses: actions/upload-artifact@v4
         with:
-          name: go-build-${{ matrix.os }}-${{ matrix.arch }}
-          path: |
-            ./bin/${{ matrix.os }}_${{ matrix.arch }}/
-      - name: Upload artifact
-        if: ${{ matrix.os == 'linux' && matrix.arch == 'amd64' }}
-        uses: actions/upload-artifact@v4
+          name: go-${{ matrix.os }}-${{ matrix.arch }}
+          path: ./bin/${{ matrix.os }}_${{ matrix.arch }}/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download last release SHA
+        uses: robinraju/release-downloader@v1.11
         with:
-          name: go-build-${{ matrix.os }}-${{ matrix.arch }}
-          path: |
-            ./bin/
+          latest: true
+          fileName: 'sha.txt'
+
+      - name: Check for changes
+        id: changes
+        run: |
+          latest_sha=$(git rev-parse HEAD)
+          stored_sha=$(cat sha.txt)
+          echo "latest_sha=$latest_sha" >> $GITHUB_ENV
+          echo "stored_sha=$stored_sha" >> $GITHUB_ENV
+          if [ "$latest_sha" != "$stored_sha" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+
+      - name: Store SHA
+        if: steps.changes.outputs.release == 'true'
+        run: echo ${{ env.latest_sha }} > sha.txt
+
+      - name: Download build artifacts
+        if: steps.changes.outputs.release == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          path: ./artifacts
+
+      - name: Retrieve version
+        id: version
+        run: |
+          version=$(head -n 1 VERSION | cut -d'-' -f1)
+          echo "go_version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        if: steps.changes.outputs.release == 'true'
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/**/*
+            sha.txt
+          tag_name: ${{ steps.version.outputs.go_version }}-$(date +'%d.%m.%Y')
+          name: Release ${{ steps.version.outputs.go_version }}-$(date +'%d.%m.%Y')
+          body: |
+            New release based on latest changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
