@@ -33,7 +33,8 @@ jobs:
         run: |
           GOOS=$(echo ${{ matrix.os }} | sed 's/-latest//')
           GOARCH=${{ matrix.arch }}
-          ./src/make.bash
+          cd go/src
+          ./make.bash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
