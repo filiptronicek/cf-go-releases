@@ -76,6 +76,7 @@ jobs:
             echo "release=true" >> "$GITHUB_OUTPUT"
           else
             echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Store SHA
         if: steps.changes.outputs.release == 'true'
