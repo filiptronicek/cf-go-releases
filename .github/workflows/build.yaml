@@ -104,17 +104,17 @@ jobs:
           echo "Artifacts to be uploaded:"
           ls ./artifacts
 
-      # - name: Create release
-      #   if: steps.changes.outputs.release == 'true'
-      #   id: create-release
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     files: |
-      #       ./artifacts/go-*/go*
-      #       sha.txt
-      #     tag_name: ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
-      #     name: Release ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
-      #     body: |
-      #       New release based on latest changes.
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release
+        if: steps.changes.outputs.release == 'true'
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/go-*/go*
+            sha.txt
+          tag_name: ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
+          name: Release ${{ steps.version.outputs.go_version }}-${{ steps.version.outputs.release_date }}
+          body: |
+            New release based on latest changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
