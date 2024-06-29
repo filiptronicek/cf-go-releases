@@ -48,6 +48,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: cloudflare/go
+          ref: cf
+
       - name: Download last release SHA
         uses: robinraju/release-downloader@v1.11
         with:
