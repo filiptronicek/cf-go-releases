@@ -42,4 +42,4 @@ jobs:
         with:
           name: go-build-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            ./bin/
+            ./bin/{{ matrix.os }}_{{ matrix.arch }}/
