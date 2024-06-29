@@ -53,14 +53,19 @@ jobs:
         with:
           latest: true
           fileName: 'sha.txt'
+        continue-on-error: true
 
       - name: Check for changes
         id: changes
         run: |
+          if [ -f sha.txt ]; then
+            stored_sha=$(cat sha.txt)
+          else
+            stored_sha=""
+          fi
           latest_sha=$(git rev-parse HEAD)
-          stored_sha=$(cat sha.txt)
-          echo "latest_sha=$latest_sha" >> $GITHUB_ENV
-          echo "stored_sha=$stored_sha" >> $GITHUB_ENV
+          echo "latest_sha=$latest_sha" >> "$GITHUB_ENV"
+          echo "stored_sha=$stored_sha" >> "$GITHUB_ENV"
           if [ "$latest_sha" != "$stored_sha" ]; then
             echo "release=true" >> "$GITHUB_OUTPUT"
           else
