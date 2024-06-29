@@ -38,8 +38,8 @@ jobs:
           ./make.bash
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: go-build-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            ./bin/{{ matrix.os }}_{{ matrix.arch }}/
+            ./bin/${{ matrix.os }}_${{ matrix.arch }}/
