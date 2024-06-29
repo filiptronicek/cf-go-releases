@@ -1,0 +1,39 @@
+name: Build and Upload Artifacts
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 1-5'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: cloudflare/go
+          ref: cf
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+      - name: Build
+        run: |
+          GOOS=${{ matrix.os == 'ubuntu-latest' && echo 'linux' || matrix.os == 'windows-latest' && echo 'windows' || echo 'darwin' }}
+          GOARCH=${{ matrix.arch }}
+          ./src/make.bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-build-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            ./bin/
